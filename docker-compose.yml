@@ -27,8 +27,6 @@ services:
   redmine:
     image: redmine:latest
     restart: always
-    ports:
-      - 8888:3000
     environment:
       REDMINE_DB_POSTGRES: redmine_db
       REDMINE_DB_USERNAME: ${REDMINE_USERNAME}
