@@ -2,20 +2,33 @@ version: "3.8"
 services:
 
   nginx:
-    restart: always
     image: nginx:latest
+    profiles: ["prod"]
+    restart: always
     ports:
       - 80:80
       - 443:443
     volumes:
-      - ./nginx/templates:/etc/nginx/templates
+      - ./nginx/prd/templates:/etc/nginx/templates
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
     environment:
       - REDMINE_HOST=${REDMINE_HOST}
 
+  nginx-dev:
+    image: nginx:latest
+    profiles: ["dev"]
+    restart: always
+    ports:
+      - "8000-9000:8000-9000"
+    volumes:
+      - ./nginx/dev/templates:/etc/nginx/templates
+    environment:
+      - REDMINE_HOST=${REDMINE_HOST}
+
   certbot:
     image: certbot/certbot
+    profiles: ["prod"]
     entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;"
     depends_on:
       - nginx
@@ -50,6 +63,7 @@ services:
 
   backup:
     build: ./backup
+    profiles: ["prod"]
     volumes:
       - ./redmine/files:/data/redmine/files
       - ./backup/archives:/backup/archives
