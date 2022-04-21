@@ -1,7 +1,6 @@
-FROM alpine:latest
-RUN apk add postgresql-client rsync mongodb-tools redis
-RUN mkdir -p /backup/redmine
+FROM docker:latest
 RUN mkdir -p /backup/archives
+RUN mkdir -p /backup/gitea
 RUN chown -R 1000 /backup
 COPY backup.sh /
 ADD cronjob /cronjob
