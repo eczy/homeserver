@@ -1,72 +1,60 @@
 version: "3.8"
-services:
 
+networks:
+  gitea:
+    external: false
+
+services:
   nginx:
     image: nginx:latest
-    profiles: ["prod"]
+    networks:
+      - gitea
     restart: always
     ports:
       - 80:80
       - 443:443
     volumes:
-      - ./nginx/prd/templates:/etc/nginx/templates
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-    environment:
-      - REDMINE_HOST=${REDMINE_HOST}
+      - ./nginx/templates:/etc/nginx/templates
 
-  nginx-dev:
-    image: nginx:latest
-    profiles: ["dev"]
+  gitea-server:
+    image: gitea/gitea:latest
+    container_name: gitea
+    environment:
+      - USER_ID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=gitea-db:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=${GITEA_POSTGRES_USERNAME}
+      - GITEA__database__PASSWD=${GITEA_POSTGRES_PASSWORD}
+      - 'GITEA__server__ROOT_URL=http://${DOMAIN}/gitea/'
     restart: always
     ports:
-      - "8000-9000:8000-9000"
+      - '${GITEA_SSH_PORT}:22'
+    networks:
+      - gitea
     volumes:
-      - ./nginx/dev/templates:/etc/nginx/templates
-    environment:
-      - REDMINE_HOST=${REDMINE_HOST}
-
-  certbot:
-    image: certbot/certbot
-    profiles: ["prod"]
-    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;"
+      - ./gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     depends_on:
-      - nginx
-      - redmine
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+      - gitea-db
 
-  redmine:
-    image: redmine:latest
+  gitea-db:
+    image: postgres:14
+    container_name: gitea-db
     restart: always
     environment:
-      REDMINE_DB_POSTGRES: redmine_db
-      REDMINE_DB_USERNAME: ${REDMINE_USERNAME}
-      REDMINE_DB_PASSWORD: ${REDMINE_PASSWORD}
-      REDMINE_PLUGIN_MIGRATE: 1
+      - POSTGRES_USER=${GITEA_POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${GITEA_POSTGRES_PASSWORD}
+      - POSTGRES_DB=gitea
+    networks:
+      - gitea
     volumes:
-      - ./redmine/files:/usr/src/redmine/files
-      - ./redmine/plugins:/usr/src/redmine/plugins
-      - ./redmine/themes:/usr/src/redmine/public/themes
-    depends_on:
-      - redmine_db
-      
-  redmine_db:
-    image: postgres:latest
-    restart: always
-    environment:
-      POSTGRES_PASSWORD: ${REDMINE_PASSWORD}
-      POSTGRES_USER: ${REDMINE_USERNAME}
-    volumes:
-      - ./postgres/data:/var/lib/postgresql/data
+      - ./postgres/gitea:/var/lib/postgresql/data
 
   backup:
     build: ./backup
-    profiles: ["prod"]
     volumes:
-      - ./redmine/files:/data/redmine/files
       - ./backup/archives:/backup/archives
-    environment:
-      REDMINE_USERNAME: ${REDMINE_USERNAME}
-      REDMINE_PASSWORD: ${REDMINE_PASSWORD}
+      - /var/run/docker.sock:/var/run/docker.sock

@@ -1,12 +1,8 @@
 #!/bin/sh
 set -e
 
-# Redmine
-PGPASSWORD=${REDMINE_PASSWORD} /usr/bin/pg_dump -U ${REDMINE_USERNAME} -h redmine_db -Fc --file=/backup/redmine/redmine.sqlc redmine
-rsync -a /data/redmine/files /backup/redmine
-
-cd /backup
-tar -czvf /backup/archives/redmine_`date +%Y-%m-%d`.tar.gz redmine
+docker exec -u git -it -w /tmp $(docker ps -qf 'name=^gitea$') bash -c '/app/gitea/gitea dump -c /data/gitea/conf/app.ini'
+tar -czvf /backup/archives/gitea_`date +%Y-%m-%d`.tar.gz /tmp
 
 # Delete backups older than 7 days
 find $(pwd) -mtime +7 -type f -delete

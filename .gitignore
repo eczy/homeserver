@@ -1,7 +1,4 @@
 .env
-certbot
-redmine/plugins/*
-redmine/themes/*
-redmine/files/*
 backup/archives/*
 postgres
+gitea
