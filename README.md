@@ -20,4 +20,4 @@ Note: This configuration is meant to be used for a server accessible only from L
 - [Gitea](https://gitea.io/en-us/) running at `$DOMAIN/gitea`
 
 ### TODO
-- [ ] Add CI/CD (probably Concourse)
+- [ ] Add CI/CD (probably [Concourse](https://concourse-ci.org/))
