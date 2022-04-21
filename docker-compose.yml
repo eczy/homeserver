@@ -27,7 +27,7 @@ services:
       - GITEA__database__NAME=gitea
       - GITEA__database__USER=${GITEA_POSTGRES_USERNAME}
       - GITEA__database__PASSWD=${GITEA_POSTGRES_PASSWORD}
-      - GITEA__server__ROOT_URL=${GITEA_ROOT_URL}
+      - 'GITEA__server__ROOT_URL=http://${DOMAIN}/gitea/'
     restart: always
     networks:
       - gitea
