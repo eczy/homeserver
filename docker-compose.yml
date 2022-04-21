@@ -3,12 +3,15 @@ version: "3.8"
 networks:
   gitea:
     external: false
+  concourse:
+    external: false
 
 services:
   nginx:
     image: nginx:latest
     networks:
       - gitea
+      - concourse
     restart: always
     ports:
       - 80:80
@@ -52,6 +55,49 @@ services:
       - gitea
     volumes:
       - ./postgres/gitea:/var/lib/postgresql/data
+
+  concourse-db:
+    image: postgres
+    networks:
+      - concourse
+    environment:
+      POSTGRES_DB: concourse
+      POSTGRES_PASSWORD: ${CONCOURSE_POSTGRES_PASSWORD}
+      POSTGRES_USER: ${CONCOURSE_POSTGRES_USERNAME}
+    volumes:
+      - ./postgres/concourse:/var/lib/postgresql/data
+
+  concourse-web:
+    image: concourse/concourse
+    networks:
+      - concourse
+    command: web
+    links: [concourse-db]
+    depends_on: [concourse-db]
+    volumes: ["./concourse/keys/web:/concourse-keys"]
+    environment:
+      CONCOURSE_EXTERNAL_URL: ${CONCOURSE_EXTERNAL_URL}
+      CONCOURSE_POSTGRES_HOST: concourse-db
+      CONCOURSE_POSTGRES_USER: ${CONCOURSE_POSTGRES_USERNAME}
+      CONCOURSE_POSTGRES_PASSWORD: ${CONCOURSE_POSTGRES_PASSWORD}
+      CONCOURSE_POSTGRES_DATABASE: concourse
+      CONCOURSE_ADD_LOCAL_USER: ${CONCOURSE_ADD_LOCAL_USER}
+      CONCOURSE_MAIN_TEAM_LOCAL_USER: ${CONCOURSE_MAIN_TEAM_LOCAL_USER}
+
+  concourse-worker:
+    image: concourse/concourse
+    networks:
+      - concourse
+    command: worker
+    privileged: true
+    depends_on: [concourse-web]
+    volumes: ["./concourse/keys/worker:/concourse-keys"]
+    links: [concourse-web]
+    stop_signal: SIGUSR2
+    environment:
+      CONCOURSE_TSA_HOST: "concourse-web:2222"
+      # enable DNS proxy to support Docker's 127.x.x.x DNS server
+      CONCOURSE_GARDEN_DNS_PROXY_ENABLE: "true"
 
   backup:
     build: ./backup
