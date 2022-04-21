@@ -18,6 +18,7 @@ Note: This configuration is meant to be used for a server accessible only from L
 
 ### Services
 - [Gitea](https://gitea.io/en-us/) running at `$DOMAIN/gitea`
+- [Concourse](https://concourse-ci.org/) running at `$DOMAIN/` (doesn't support non-root URI as base).
+
 
 ### TODO
-- [ ] Add CI/CD (probably [Concourse](https://concourse-ci.org/))
