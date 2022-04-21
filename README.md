@@ -13,7 +13,9 @@ Note: This configuration is meant to be used for a server accessible only from L
     - `$GITEA_POSTGRES_PASSWORD` - password for gitea user in `gitea-db`
     - `$GITEA_SSH_PORT` - SSH port on host to forward to port 22 in `gitea` container
 
-3. `docker compose up -d`
+3. `./generate-concourse-keys.sh`
+
+4. `docker compose up -d`
     
 
 ### Services
