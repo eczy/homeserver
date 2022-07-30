@@ -1,36 +1,43 @@
-version: "3.8"
+version: "3"
 
 networks:
   gitea:
     external: false
-  concourse:
+  redmine:
     external: false
 
 services:
-  nginx:
-    image: nginx:latest
+  reverse-proxy:
+    image: traefik:v2.8
+    command: 
+      - --api.insecure=true
+      - --providers.docker
+      - --entrypoints.http.address=:80
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
     networks:
       - gitea
-      - concourse
-    restart: always
-    ports:
-      - 80:80
-      - 443:443
+      - redmine
     volumes:
-      - ./nginx/templates:/etc/nginx/templates
+      - /var/run/docker.sock:/var/run/docker.sock
 
-  gitea-server:
+  gitea:
     image: gitea/gitea:latest
     container_name: gitea
     environment:
       - USER_ID=1000
       - USER_GID=1000
+
       - GITEA__database__DB_TYPE=postgres
       - GITEA__database__HOST=gitea-db:5432
       - GITEA__database__NAME=gitea
-      - GITEA__database__USER=${GITEA_POSTGRES_USERNAME}
-      - GITEA__database__PASSWD=${GITEA_POSTGRES_PASSWORD}
-      - 'GITEA__server__ROOT_URL=http://${DOMAIN}/gitea/'
+      - GITEA__database__USER=${GITEA_DB_USERNAME}
+      - GITEA__database__PASSWD=${GITEA_DB_PASSWORD}
+
+      - GITEA__server__SSH_PORT=${GITEA_SSH_PORT}
+      - GITEA__server__ROOT_URL=${GITEA_ROOT_URL}
     restart: always
     ports:
       - '${GITEA_SSH_PORT}:22'
@@ -40,6 +47,9 @@ services:
       - ./gitea:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
+    labels:
+      - "traefik.http.routers.gitea.rule=Host(`gitea.docker.localhost`)"
+      - "traefik.http.services.gitea.loadbalancer.server.port=3000"
     depends_on:
       - gitea-db
 
@@ -48,59 +58,55 @@ services:
     container_name: gitea-db
     restart: always
     environment:
-      - POSTGRES_USER=${GITEA_POSTGRES_USERNAME}
-      - POSTGRES_PASSWORD=${GITEA_POSTGRES_PASSWORD}
+      - POSTGRES_USER=${GITEA_DB_USERNAME}
+      - POSTGRES_PASSWORD=${GITEA_DB_PASSWORD}
       - POSTGRES_DB=gitea
     networks:
       - gitea
     volumes:
       - ./postgres/gitea:/var/lib/postgresql/data
 
-  concourse-db:
-    image: postgres
-    networks:
-      - concourse
+  redmine:
+    image: redmine:5
+    restart: always
     environment:
-      POSTGRES_DB: concourse
-      POSTGRES_PASSWORD: ${CONCOURSE_POSTGRES_PASSWORD}
-      POSTGRES_USER: ${CONCOURSE_POSTGRES_USERNAME}
+      REDMINE_DB_POSTGRES: redmine-db
+      REDMINE_DB_USERNAME: ${REDMINE_DB_USERNAME}
+      REDMINE_DB_PASSWORD: ${REDMINE_DB_PASSWORD}
+      REDMINE_DB_DATABASE: ${REDMINE_DB_DATABASE}
+      REDMINE_PLUGINS_MIGRATE: 1
+    networks:
+      - redmine
     volumes:
-      - ./postgres/concourse:/var/lib/postgresql/data
+      - ./redmine/files:/usr/src/redmine/files
+      - ./redmine/plugins:/usr/src/redmine/plugins
+      - ./redmine/themes:/usr/src/redmine/public/themes
+    labels:
+      - "traefik.http.routers.redmine.rule=Host(`redmine.docker.localhost`)"
+      - "traefik.http.services.redmine.loadbalancer.server.port=3000"
+    depends_on:
+      - redmine-db
 
-  concourse-web:
-    image: concourse/concourse
-    networks:
-      - concourse
-    command: web
-    links: [concourse-db]
-    depends_on: [concourse-db]
-    volumes: ["./concourse/keys/web:/concourse-keys"]
+  redmine-db:
+    image: postgres:14
+    restart: always
     environment:
-      CONCOURSE_EXTERNAL_URL: ${CONCOURSE_EXTERNAL_URL}
-      CONCOURSE_POSTGRES_HOST: concourse-db
-      CONCOURSE_POSTGRES_USER: ${CONCOURSE_POSTGRES_USERNAME}
-      CONCOURSE_POSTGRES_PASSWORD: ${CONCOURSE_POSTGRES_PASSWORD}
-      CONCOURSE_POSTGRES_DATABASE: concourse
-      CONCOURSE_ADD_LOCAL_USER: ${CONCOURSE_ADD_LOCAL_USER}
-      CONCOURSE_MAIN_TEAM_LOCAL_USER: ${CONCOURSE_MAIN_TEAM_LOCAL_USER}
-
-  concourse-worker:
-    image: concourse/concourse
+      POSTGRES_USER: ${REDMINE_DB_USERNAME}
+      POSTGRES_PASSWORD: ${REDMINE_DB_PASSWORD}
     networks:
-      - concourse
-    command: worker
-    privileged: true
-    depends_on: [concourse-web]
-    volumes: ["./concourse/keys/worker:/concourse-keys"]
-    links: [concourse-web]
-    stop_signal: SIGUSR2
-    environment:
-      CONCOURSE_TSA_HOST: "concourse-web:2222"
-      # enable DNS proxy to support Docker's 127.x.x.x DNS server
-      CONCOURSE_GARDEN_DNS_PROXY_ENABLE: "true"
+      - redmine
+    volumes:
+      - ./postgres/redmine:/var/lib/postgresql/data
 
   backup:
     build: ./backup
+    environment:
+      REDMINE_DB_USERNAME: ${REDMINE_DB_USERNAME}
+      REDMINE_DB_PASSWORD: ${REDMINE_DB_PASSWORD}
     volumes:
+      - ./redmine/files:/data/redmine/files
       - ./backup/archives:/backup/archives
+      - ./backup/redmine:/backup/redmine
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - redmine

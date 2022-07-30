@@ -1,4 +1,5 @@
 FROM docker:latest
+RUN apk add postgresql-client rsync
 RUN mkdir -p /backup/archives
 RUN mkdir -p /backup/gitea
 RUN chown -R 1000 /backup
