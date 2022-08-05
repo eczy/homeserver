@@ -8,9 +8,6 @@ Note: This configuration is meant to be used for a server accessible only from L
 
 2. Fill in variables in `.env`
 
-3.
-    ```
-    cd concourse/keys && ./generate 
-    ```
+3. `cd concourse/keys && ./generate`
 
 4. `docker compose up -d`
