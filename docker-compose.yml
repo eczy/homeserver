@@ -10,61 +10,65 @@ services:
   reverse-proxy:
     image: traefik:v2.8
     command: 
-      - --api.insecure=true
-      - --providers.docker
-      - --entrypoints.http.address=:80
+    - --api.insecure=true
+    - --providers.docker
+    - --entrypoints.http.address=:80
+    - --entrypoints.http.http.redirections.entryPoint.to=https
+    - --entrypoints.http.http.redirections.entryPoint.scheme=https
+    - --entrypoints.https.address=:443
     ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
+    - "80:80"
+    - "443:443"
+    - "8080:8080"
     networks:
-      - gitea
-      - redmine
+    - gitea
+    - redmine
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    - /var/run/docker.sock:/var/run/docker.sock
 
   gitea:
     image: gitea/gitea:latest
     container_name: gitea
     environment:
-      - USER_ID=1000
-      - USER_GID=1000
+    - USER_ID=1000
+    - USER_GID=1000
 
-      - GITEA__database__DB_TYPE=postgres
-      - GITEA__database__HOST=gitea-db:5432
-      - GITEA__database__NAME=gitea
-      - GITEA__database__USER=${GITEA_DB_USERNAME}
-      - GITEA__database__PASSWD=${GITEA_DB_PASSWORD}
+    - GITEA__database__DB_TYPE=postgres
+    - GITEA__database__HOST=gitea-db:5432
+    - GITEA__database__NAME=gitea
+    - GITEA__database__USER=${GITEA_DB_USERNAME}
+    - GITEA__database__PASSWD=${GITEA_DB_PASSWORD}
 
-      - GITEA__server__SSH_PORT=${GITEA_SSH_PORT}
-      - GITEA__server__ROOT_URL=${GITEA_ROOT_URL}
+    - GITEA__server__SSH_PORT=${GITEA_SSH_PORT}
+    - GITEA__server__DOMAIN=${GITEA_DOMAIN}
     restart: always
     ports:
-      - '${GITEA_SSH_PORT}:22'
+    - '${GITEA_SSH_PORT}:22'
     networks:
-      - gitea
+    - gitea
     volumes:
-      - ./gitea:/data
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
+    - ./gitea:/data
+    - /etc/timezone:/etc/timezone:ro
+    - /etc/localtime:/etc/localtime:ro
     labels:
-      - "traefik.http.routers.gitea.rule=Host(`gitea.docker.localhost`)"
-      - "traefik.http.services.gitea.loadbalancer.server.port=3000"
+    - "traefik.http.routers.gitea.rule=Host(`${GITEA_DOMAIN}`)"
+    - "traefik.http.routers.gitea.tls=true"
+    - "traefik.http.services.gitea.loadbalancer.server.port=3000"
     depends_on:
-      - gitea-db
+    - gitea-db
 
   gitea-db:
     image: postgres:14
     container_name: gitea-db
     restart: always
     environment:
-      - POSTGRES_USER=${GITEA_DB_USERNAME}
-      - POSTGRES_PASSWORD=${GITEA_DB_PASSWORD}
-      - POSTGRES_DB=gitea
+    - POSTGRES_USER=${GITEA_DB_USERNAME}
+    - POSTGRES_PASSWORD=${GITEA_DB_PASSWORD}
+    - POSTGRES_DB=gitea
     networks:
-      - gitea
+    - gitea
     volumes:
-      - ./postgres/gitea:/var/lib/postgresql/data
+    - ./postgres/gitea:/var/lib/postgresql/data
 
   redmine:
     image: redmine:5
@@ -76,16 +80,17 @@ services:
       REDMINE_DB_DATABASE: ${REDMINE_DB_DATABASE}
       REDMINE_PLUGINS_MIGRATE: 1
     networks:
-      - redmine
+    - redmine
     volumes:
-      - ./redmine/files:/usr/src/redmine/files
-      - ./redmine/plugins:/usr/src/redmine/plugins
-      - ./redmine/themes:/usr/src/redmine/public/themes
+    - ./redmine/files:/usr/src/redmine/files
+    - ./redmine/plugins:/usr/src/redmine/plugins
+    - ./redmine/themes:/usr/src/redmine/public/themes
     labels:
-      - "traefik.http.routers.redmine.rule=Host(`redmine.docker.localhost`)"
-      - "traefik.http.services.redmine.loadbalancer.server.port=3000"
+    - "traefik.http.routers.redmine.rule=Host(`${REDMINE_DOMAIN}`)"
+    - "traefik.http.routers.redmine.tls=true"
+    - "traefik.http.services.redmine.loadbalancer.server.port=3000"
     depends_on:
-      - redmine-db
+    - redmine-db
 
   redmine-db:
     image: postgres:14
@@ -94,9 +99,9 @@ services:
       POSTGRES_USER: ${REDMINE_DB_USERNAME}
       POSTGRES_PASSWORD: ${REDMINE_DB_PASSWORD}
     networks:
-      - redmine
+    - redmine
     volumes:
-      - ./postgres/redmine:/var/lib/postgresql/data
+    - ./postgres/redmine:/var/lib/postgresql/data
 
   backup:
     build: ./backup
@@ -104,9 +109,9 @@ services:
       REDMINE_DB_USERNAME: ${REDMINE_DB_USERNAME}
       REDMINE_DB_PASSWORD: ${REDMINE_DB_PASSWORD}
     volumes:
-      - ./redmine/files:/data/redmine/files
-      - ./backup/archives:/backup/archives
-      - ./backup/redmine:/backup/redmine
-      - /var/run/docker.sock:/var/run/docker.sock
+    - ./redmine/files:/data/redmine/files
+    - ./backup/archives:/backup/archives
+    - ./backup/redmine:/backup/redmine
+    - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - redmine
+    - redmine
