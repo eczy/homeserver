@@ -8,19 +8,4 @@ Note: This configuration is meant to be used for a server accessible only from L
 
 2. Fill in variables in `.env`
 
-    - `$DOMAIN` - hostname of the server on LAN
-    - `$GITEA_POSTGRES_USERNAME` - username for gitea user in `gitea-db`
-    - `$GITEA_POSTGRES_PASSWORD` - password for gitea user in `gitea-db`
-    - `$GITEA_SSH_PORT` - SSH port on host to forward to port 22 in `gitea` container
-
-3. `./generate-concourse-keys.sh`
-
-4. `docker compose up -d`
-    
-
-### Services
-- [Gitea](https://gitea.io/en-us/) running at `$DOMAIN/gitea`
-- [Concourse](https://concourse-ci.org/) running at `$DOMAIN/` (doesn't support non-root URI as base).
-
-
-### TODO
+3. `docker compose up -d`
