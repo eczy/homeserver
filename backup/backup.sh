@@ -10,5 +10,8 @@ PGPASSWORD=${REDMINE_DB_PASSWORD} /usr/bin/pg_dump -U ${REDMINE_DB_USERNAME} -h 
 rsync -a /data/redmine/files /backup/redmine
 tar -C /backup/redmine -czvf /backup/archives/redmine_`date +%Y-%m-%d`.tar.gz .
 
+# Concourse
+PGPASSWORD=${CONCOURSE_DB_PASSWORD} /usr/bin/pg_dump -U ${CONCOURSE_DB_USERNAME} -h 'concourse-db' -Fc --file=/backup/concourse/concourse.sqlc concourse
+
 # Delete backups older than 7 days
 find $(pwd) -mtime +7 -type f -delete
