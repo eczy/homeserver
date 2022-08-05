@@ -11,6 +11,7 @@ networks:
 services:
   reverse-proxy:
     image: traefik:v2.8
+    restart: unless-stopped
     command: 
     - --api.insecure=true
     - --providers.docker
@@ -31,6 +32,7 @@ services:
 
   gitea:
     image: gitea/gitea:latest
+    restart: unless-stopped
     container_name: gitea
     environment:
     - USER_ID=1000
@@ -44,7 +46,6 @@ services:
 
     - GITEA__server__SSH_PORT=${GITEA_SSH_PORT}
     - GITEA__server__DOMAIN=${GITEA_DOMAIN}
-    restart: always
     ports:
     - '${GITEA_SSH_PORT}:22'
     networks:
@@ -63,7 +64,7 @@ services:
   gitea-db:
     image: postgres:14
     container_name: gitea-db
-    restart: always
+    restart: unless-stopped
     environment:
     - POSTGRES_USER=${GITEA_DB_USERNAME}
     - POSTGRES_PASSWORD=${GITEA_DB_PASSWORD}
@@ -75,7 +76,7 @@ services:
 
   redmine:
     image: redmine:5
-    restart: always
+    restart: unless-stopped
     environment:
       REDMINE_DB_POSTGRES: redmine-db
       REDMINE_DB_USERNAME: ${REDMINE_DB_USERNAME}
@@ -97,7 +98,7 @@ services:
 
   redmine-db:
     image: postgres:14
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${REDMINE_DB_USERNAME}
       POSTGRES_PASSWORD: ${REDMINE_DB_PASSWORD}
@@ -108,6 +109,7 @@ services:
 
   concourse-db:
     image: postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: concourse
       POSTGRES_USER: ${CONCOURSE_DB_USERNAME}
@@ -125,6 +127,7 @@ services:
   
   concourse-web:
     image: concourse/concourse
+    restart: unless-stopped
     command: web
     links: [concourse-db]
     depends_on: [concourse-db]
@@ -152,6 +155,7 @@ services:
 
   concourse-worker:
     image: concourse/concourse
+    restart: unless-stopped
     command: worker
     privileged: true
     depends_on: [concourse-web]
@@ -172,6 +176,7 @@ services:
 
   backup:
     build: ./backup
+    restart: unless-stopped
     environment:
       REDMINE_DB_USERNAME: ${REDMINE_DB_USERNAME}
       REDMINE_DB_PASSWORD: ${REDMINE_DB_PASSWORD}
