@@ -1,4 +1,13 @@
 .env
 backup/archives/*
+backup/redmine/*
+!backup/redmine/.gitkeep
+!backup/archives/.gitkeep
 postgres
 gitea
+redmine
+
+concourse/keys/web/*
+!concourse/keys/web/.gitkeep
+concourse/keys/worker/*
+!concourse/keys/worker/.gitkeep
